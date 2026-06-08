@@ -48,7 +48,13 @@ prompt() {
   if [[ -n "${!var_name:-}" ]]; then
     return 0
   fi
-  read -rp "${prompt_text} [${default_val}]: " input
+  if [[ -r /dev/tty ]]; then
+    printf "%s [%s]: " "${prompt_text}" "${default_val}" > /dev/tty
+    IFS= read -r input < /dev/tty
+  else
+    input=""
+    echo "${prompt_text} [${default_val}]: ${default_val}"
+  fi
   if [[ -z "${input}" ]]; then
     printf -v "${var_name}" '%s' "${default_val}"
   else
@@ -74,8 +80,14 @@ prompt WARP_WEBUI_USER "Логин администратора веб-пане�
 
 if [[ -z "${WARP_WEBUI_PASS:-}" ]]; then
   while true; do
-    read -rsp "Пароль администратора (минимум 8 символов): " WARP_WEBUI_PASS
-    echo
+    if [[ ! -r /dev/tty ]]; then
+      echo "WARP_WEBUI_PASS не задан, а интерактивный терминал недоступен."
+      echo "Передайте пароль через переменную окружения WARP_WEBUI_PASS."
+      exit 1
+    fi
+    printf "Пароль администратора (минимум 8 символов): " > /dev/tty
+    IFS= read -r -s WARP_WEBUI_PASS < /dev/tty
+    printf "\n" > /dev/tty
     if [[ "${#WARP_WEBUI_PASS}" -ge 8 ]]; then
       break
     fi
